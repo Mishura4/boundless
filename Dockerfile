@@ -5,7 +5,8 @@ FROM ubuntu:16.04
 ENV DEBIAN_FRONTEND noninteractive
 
 # Run system update
-RUN apt-get update -y
+RUN apt-get update -y \
+    && apt-get install -y apt-utils
 
 # Install required packages
 RUN apt-get install -y build-essential libtool autotools-dev automake pkg-config libssl-dev libevent-dev bsdmainutils python3 \

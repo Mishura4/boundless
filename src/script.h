@@ -280,6 +280,11 @@ public:
     CScript(const unsigned char* pbegin, const unsigned char* pend) : std::vector<unsigned char>(pbegin, pend) { }
 #endif
 
+    CScript& operator=(const CScript& b) {
+        std::vector<unsigned char>::operator=(b);
+        return *this;
+    }
+
     CScript& operator+=(const CScript& b)
     {
         insert(end(), b.begin(), b.end());

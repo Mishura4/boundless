@@ -201,6 +201,13 @@ public:
         UnlockObject(vch);
     }
 
+    CKey& operator=(const CKey &secret) {
+        fValid = secret.fValid;
+        fCompressed = secret.fCompressed;
+        memcpy(vch, secret.vch, sizeof(vch));
+        return *this;
+    }
+
     // Initialize using begin and end iterators to byte data.
     template<typename T>
     void Set(const T pbegin, const T pend, bool fCompressedIn) {

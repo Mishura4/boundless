@@ -8,7 +8,6 @@
 
 #include "key.h"
 
-
 // anonymous namespace with local implementation code (OpenSSL interaction)
 namespace {
 
@@ -81,7 +80,7 @@ int ECDSA_SIG_recover_key_GFp(EC_KEY *eckey, ECDSA_SIG *ecsig, const unsigned ch
     x = BN_CTX_get(ctx);
     if (!BN_copy(x, order)) { ret=-1; goto err; }
     if (!BN_mul_word(x, i)) { ret=-1; goto err; }
-    if (!BN_add(x, x, ecsig->r)) { ret=-1; goto err; }
+    if (!BN_add(x, x, ECDSA_SIG_get0_r(ecsig))) { ret=-1; goto err; }
     field = BN_CTX_get(ctx);
     if (!EC_GROUP_get_curve_GFp(group, field, NULL, NULL, ctx)) { ret=-2; goto err; }
     if (BN_cmp(x, field) >= 0) { ret=0; goto err; }
@@ -99,12 +98,12 @@ int ECDSA_SIG_recover_key_GFp(EC_KEY *eckey, ECDSA_SIG *ecsig, const unsigned ch
     if (!BN_bin2bn(msg, msglen, e)) { ret=-1; goto err; }
     if (8*msglen > n) BN_rshift(e, e, 8-(n & 7));
     zero = BN_CTX_get(ctx);
-    if (!BN_zero(zero)) { ret=-1; goto err; }
+    BN_zero(zero);
     if (!BN_mod_sub(e, zero, e, order, ctx)) { ret=-1; goto err; }
     rr = BN_CTX_get(ctx);
-    if (!BN_mod_inverse(rr, ecsig->r, order, ctx)) { ret=-1; goto err; }
+    if (!BN_mod_inverse(rr, ECDSA_SIG_get0_r(ecsig), order, ctx)) { ret=-1; goto err; }
     sor = BN_CTX_get(ctx);
-    if (!BN_mod_mul(sor, ecsig->s, rr, order, ctx)) { ret=-1; goto err; }
+    if (!BN_mod_mul(sor, ECDSA_SIG_get0_s(ecsig), rr, order, ctx)) { ret=-1; goto err; }
     eor = BN_CTX_get(ctx);
     if (!BN_mod_mul(eor, e, rr, order, ctx)) { ret=-1; goto err; }
     if (!EC_POINT_mul(group, Q, eor, R, sor, ctx)) { ret=-2; goto err; }
@@ -148,11 +147,10 @@ public:
     }
 
     void SetSecretBytes(const unsigned char vch[32]) {
-        BIGNUM bn;
-        BN_init(&bn);
-        assert(BN_bin2bn(vch, 32, &bn));
-        assert(EC_KEY_regenerate_key(pkey, &bn));
-        BN_clear_free(&bn);
+        BIGNUM* bn = BN_new();
+        assert(BN_bin2bn(vch, 32, bn));
+        assert(EC_KEY_regenerate_key(pkey, bn));
+        BN_clear_free(bn);
     }
 
     void GetPrivKey(CPrivKey &privkey, bool fCompressed) {
@@ -238,8 +236,8 @@ public:
         if (sig==NULL)
             return false;
         memset(p64, 0, 64);
-        int nBitsR = BN_num_bits(sig->r);
-        int nBitsS = BN_num_bits(sig->s);
+        int nBitsR = BN_num_bits(ECDSA_SIG_get0_r(sig));
+        int nBitsS = BN_num_bits(ECDSA_SIG_get0_s(sig));
         if (nBitsR <= 256 && nBitsS <= 256) {
             CPubKey pubkey;
             GetPubKey(pubkey, true);
@@ -256,8 +254,8 @@ public:
                 }
             }
             assert(fOk);
-            BN_bn2bin(sig->r,&p64[32-(nBitsR+7)/8]);
-            BN_bn2bin(sig->s,&p64[64-(nBitsS+7)/8]);
+            BN_bn2bin(ECDSA_SIG_get0_r(sig),&p64[32-(nBitsR+7)/8]);
+            BN_bn2bin(ECDSA_SIG_get0_s(sig),&p64[64-(nBitsS+7)/8]);
         }
         ECDSA_SIG_free(sig);
         return fOk;
@@ -272,8 +270,12 @@ public:
         if (rec<0 || rec>=3)
             return false;
         ECDSA_SIG *sig = ECDSA_SIG_new();
-        BN_bin2bn(&p64[0],  32, sig->r);
-        BN_bin2bn(&p64[32], 32, sig->s);
+        BIGNUM* rbn = BN_dup(ECDSA_SIG_get0_r(sig));
+        BIGNUM* sbn = BN_dup(ECDSA_SIG_get0_s(sig));
+        BN_bin2bn(&p64[0],  32, rbn);
+        BN_bin2bn(&p64[32], 32, sbn);
+        if (ECDSA_SIG_set0(sig, rbn, sbn) != 1)
+            return false;
         bool ret = ECDSA_SIG_recover_key_GFp(pkey, sig, (unsigned char*)&hash, sizeof(hash), rec, 0) == 1;
         ECDSA_SIG_free(sig);
         return ret;

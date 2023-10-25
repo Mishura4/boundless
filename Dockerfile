@@ -20,7 +20,7 @@ RUN add-apt-repository -y ppa:bitcoin/bitcoin \
     && apt-get install -y libdb4.8-dev libdb4.8++-dev
 
 # Clone the repository and build the software
-RUN git clone https://github.com/boundless.git \
+RUN git clone https://github.com/codenlighten/boundless.git \
     && cd boundless/src \
     && make -f makefile.unix \
     && cd .. \

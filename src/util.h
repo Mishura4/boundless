@@ -21,7 +21,7 @@
 #include <string>
 
 #include <boost/version.hpp>
-#include <boost/thread.hpp>
+#include <boost/thread/thread.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/date_time/gregorian/gregorian_types.hpp>

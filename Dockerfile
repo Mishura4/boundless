@@ -1,6 +1,9 @@
 # Start with the Ubuntu 16.04 base image
 FROM ubuntu:22.04
 
+# Set the working directory for building
+WORKDIR /boundless
+
 # Avoid interaction with the user for apt-get install
 ENV DEBIAN_FRONTEND noninteractive
 
@@ -15,6 +18,9 @@ RUN add-apt-repository -y ppa:ubuntuhandbook1/ppa \
     libboost-system-dev libboost-filesystem-dev libboost-chrono-dev libboost-program-options-dev libboost-test-dev libboost-thread-dev \
     libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools libprotobuf-dev protobuf-compiler libboost-all-dev \
     software-properties-common git libminiupnpc-dev libzmq3-dev libqt4-dev wget unzip
+
+# Copy sources to working directory
+COPY . .
 
 # Download libdb4.8 sources
 RUN wget http://download.oracle.com/berkeley-db/db-4.8.30.zip \
@@ -34,9 +40,8 @@ RUN ../dist/configure --prefix=/usr --enable-cxx \
 # Back to root directory
 WORKDIR ../../
 
-# Clone the repository and build the software
-RUN git clone https://github.com/codenlighten/boundless.git \
-    && cd boundless/src \
+# Build the software
+RUN cd src \
     && make -f makefile.unix \
     && cd .. \
     && qmake && make

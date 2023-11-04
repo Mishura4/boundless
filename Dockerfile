@@ -19,6 +19,8 @@ RUN add-apt-repository -y ppa:bitcoin/bitcoin \
     && apt-get update -y \
     && apt-get install -y libdb4.8-dev libdb4.8++-dev
 
+RUN chmod +x src/leveldb/build_detect_platform
+
 # Clone the repository and build the software
 RUN git clone https://github.com/codenlighten/boundless.git \
     && cd boundless/src \
